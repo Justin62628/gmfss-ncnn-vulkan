@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(Windows) Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "D:/Program/VSsource/research/gmfss-ncnn-vulkan-demo/src/out/build/x64-Debug/rife-ncnn-vulkan.exe",
+            "args": ["-0", "${workspaceRoot}/images/0.png", "-1", "${workspaceRoot}/images/1.png", "-o", "${workspaceRoot}/images/out.png", "-m", "${workspaceRoot}/models/rife-v4.6"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [],
+            "console": "externalTerminal"
+        },
+        
+    ]
+}
