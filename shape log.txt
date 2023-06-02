@@ -1,0 +1,16 @@
+split
+// b0,b,c,h,w -> b0, b, c, s, h/s, s, w/s -> b0, b, s, s, c, h/s, w/s -> b0,b*s*s,c,h/s,w/s 
+w,h,c -> w/s, s, h/s, s, c -> w/s, h/s, c, s, s -> w/s, h/s, c, s*s
+
+merge
+!cl:
+newb = b0*b/s/s == 1, s, s , c, h, w -> newb, c, s, h, s , w -> newb, c, s*h, s*w
+w,h,d,c -> w, h, d, s, s -> w, s, h, s, d -> w\*s, h\*s, d
+cl:
+b0, b, h, w, c -> newb = b0*b/s/s == b0, s, s , h, w, c -> newb, s, h, s, w, c -> newb, s*h, s*w, c
+c->w
+w->h
+h->d
+b->c
+
+w, h, d, c -> w, h, d\*c/s/s, s, s -> w, h, s, d, s -> w, s*h, s*d, 

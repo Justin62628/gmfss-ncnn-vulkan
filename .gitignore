@@ -1,2 +1,5 @@
 src/out
 .vs
+*.png
+*.param
+*.bin

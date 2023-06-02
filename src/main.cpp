@@ -457,12 +457,13 @@ int main(int argc, char** argv)
     int tta_mode = 0;
     int tta_temporal_mode = 0;
     int uhd_mode = 0;
+    int test = 0;
     path_t pattern_format = PATHSTR("%08d.png");
 
 #if _WIN32
     setlocale(LC_ALL, "");
     wchar_t opt;
-    while ((opt = getopt(argc, argv, L"0:1:i:o:n:s:m:g:j:f:vxzuh")) != (wchar_t)-1)
+    while ((opt = getopt(argc, argv, L"0:1:i:o:n:s:m:g:j:f:vxzuht")) != (wchar_t)-1)
     {
         switch (opt)
         {
@@ -508,6 +509,9 @@ int main(int argc, char** argv)
             break;
         case L'u':
             uhd_mode = 1;
+            break;
+        case L't':
+            test = 1;
             break;
         case L'h':
         default:
@@ -667,20 +671,20 @@ int main(int argc, char** argv)
         // fine
         rife_v2 = true;
     }
-    else if (model.find(PATHSTR("rife-v4")) != path_t::npos)
+    else // else if (model.find(PATHSTR("rife-v4")) != path_t::npos)
     {
         // fine
         rife_v4 = true;
     }
-    else if (model.find(PATHSTR("rife")) != path_t::npos)
-    {
-        // fine
-    }
-    else
-    {
-        fprintf(stderr, "unknown model dir type\n");
-        return -1;
-    }
+    // else if (model.find(PATHSTR("rife")) != path_t::npos)
+    // {
+    //     // fine
+    // }
+    // else
+    // {
+    //     fprintf(stderr, "unknown model dir type\n");
+    //     return -1;
+    // }
 
     if (!rife_v4 && (numframe != 0 || timestep != 0.5))
     {

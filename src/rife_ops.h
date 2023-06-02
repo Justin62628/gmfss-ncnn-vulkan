@@ -24,4 +24,38 @@ private:
     ncnn::Pipeline* pipeline_warp_pack8;
 };
 
+class SplitFeature : public ncnn::Layer
+{
+public:
+    SplitFeature();
+    virtual int forward(const ncnn::Mat& bottom_blob, ncnn::Mat& top_blob, const ncnn::Option& opt) const;
+    virtual int load_param(const ncnn::ParamDict& pd);
+
+public:
+    int stride;
+};
+
+class MergeSplits: public ncnn::Layer
+{
+public:
+    MergeSplits();
+    virtual int forward(const ncnn::Mat& bottom_blob, ncnn::Mat& top_blob, const ncnn::Option& opt) const;
+    virtual int load_param(const ncnn::ParamDict& pd);
+public:
+    int upscale_factor;
+};
+
+class ConvexUpsampling : public ncnn::Layer
+{
+public:
+    ConvexUpsampling();
+
+    virtual int load_param(const ncnn::ParamDict& pd);
+
+    virtual int forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<ncnn::Mat>& top_blobs, const ncnn::Option& opt) const;
+
+public:
+    int split_num;
+};
+
 #endif // RIFE_OPS_H

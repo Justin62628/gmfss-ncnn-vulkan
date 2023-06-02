@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "D:/Program/VSsource/research/gmfss-ncnn-vulkan-demo/src/out/build/x64-Debug/rife-ncnn-vulkan.exe",
-            "args": ["-0", "${workspaceRoot}/images/0.png", "-1", "${workspaceRoot}/images/1.png", "-o", "${workspaceRoot}/images/out.png", "-m", "${workspaceRoot}/models/rife-v4.6"],
+            "args": ["-0", "${workspaceRoot}/images/0022.jpg.png", "-1", "${workspaceRoot}/images/0023.jpg.png", "-o", "${workspaceRoot}/images/out.png", "-m", "${workspaceRoot}/models/gmfss", "-g", "-1"],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],
