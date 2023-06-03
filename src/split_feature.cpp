@@ -112,7 +112,7 @@ int SplitFeature::forward(const Mat& bottom_blob, Mat& top_blob, const Option& o
     int channels = bottom_blob.c;
     size_t elemsize = bottom_blob.elemsize;
 
-    int outw = w / stride;
+    int outw = w / stride; // w=w h=h d=1 c=c -> w=w/s h=h/s d=c c=s*s
     int outh = h / stride;
     int outd = channels;
     int outc = stride * stride;
@@ -121,8 +121,8 @@ int SplitFeature::forward(const Mat& bottom_blob, Mat& top_blob, const Option& o
     if (top_blob.empty())
         return -100;
 
-#pragma omp parallel for num_threads(opt.num_threads)
-    for (int q = 0; q < channels; q++)
+//#pragma omp parallel for num_threads(opt.num_threads)
+    for (int q = 0; q < channels; q++)  // top.d
     {
         const Mat m = bottom_blob.channel(q);
 
@@ -132,15 +132,17 @@ int SplitFeature::forward(const Mat& bottom_blob, Mat& top_blob, const Option& o
             {
                 int p = sh * stride + sw;
 
-                float* outptr = top_blob.depth(p + q); // at c=p, d=q (w,h) plane
                 for (int i = 0; i < outh; i++)
                 {
-                    const float* sptr = m.row(i * stride + sh) + sw;
+                    const float* sptr = m.row(i + sh * outh ) + sw*outw;
+                    float* outptr = top_blob.channel(p).depth(q).row(i); // at c=p, d=q (w,h) plane
+
+                    //float* outptr = top_blob.row((p * channels + q) * outw * outh + i * outh); // at c=p, d=q (w,h) plane
                     for (int j = 0; j < outw; j++)
                     {
                         outptr[0] = sptr[0];
 
-                        sptr += stride;
+                        sptr ++;
                         outptr++;
                     }
                 }

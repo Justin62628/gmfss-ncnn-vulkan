@@ -117,10 +117,10 @@ int MergeSplits::forward(const Mat& bottom_blob, Mat& top_blob, const Option& op
     int outc = d;
 
     top_blob.create(outw, outh, outc, elemsize, opt.blob_allocator);
-    if (top_blob.empty())
+    if (top_blob.empty() || channels != upscale_factor * upscale_factor)
         return -100;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+//#pragma omp parallel for num_threads(opt.num_threads)
     for (int p = 0; p < outc; p++)
     {
         Mat m = top_blob.channel(p);
@@ -129,23 +129,25 @@ int MergeSplits::forward(const Mat& bottom_blob, Mat& top_blob, const Option& op
         {
             for (int sw = 0; sw < upscale_factor; sw++)
             {
-                int q = p * upscale_factor * upscale_factor + sh * upscale_factor + sw;
+                int q;
+                q = sh * upscale_factor + sw;
 
-                const float* sptr = bottom_blob.depth(q);  // at c=p, d=sh * upscale_factor + sw (w,h) plane
-
+                const Mat s = bottom_blob.channel(q);
                 for (int i = 0; i < h; i++)
                 {
-                    float* outptr = m.row(i * upscale_factor + sh) + sw;
+                    float* outptr = m.row(i + sh * h) + sw * w;
+                    const float* sptr = s.channel(p).row(i);
                     for (int j = 0; j < w; j++)
                     {
                         outptr[0] = sptr[0];
 
                         sptr++;
-                        outptr += upscale_factor;
+                        outptr++;
                     }
                 }
             }
         }
+
     }
 
     return 0;

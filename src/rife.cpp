@@ -21,6 +21,8 @@
 #include "rife_v4_timestep_tta.comp.hex.h"
 
 #include "rife_ops.h"
+#include "layer.h"
+#include "layer_type.h"
 
 DEFINE_LAYER_CREATOR(Warp)
 DEFINE_LAYER_CREATOR(SplitFeature)
@@ -1124,7 +1126,37 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
         ncnn::Mat flow_padded;
         ncnn::Mat out_padded_reversed;
 
-        print_mat(in0_padded, L"in0_padded");
+        print_mat(in0_padded, "in0_padded");
+
+        // Some Test
+        // ncnn::Mat testMat, testOutMat;
+        // testMat.create(6, 4, 2);
+        // //testOutMat.create(3, 2, 2, 4);
+        // int test_cnt = 0;
+        // float* testMat_ptr = (float *)testMat.data;
+        // for(int c=0;c<2;c++)
+        // for(int i = 0; i < 6; i++)
+        // {
+        //     for(int j = 0; j < 4; j++)
+        //     {
+        //         *(testMat_ptr++) = test_cnt * 1.f;
+        //         test_cnt++;
+        //     }
+        // }
+        
+        // ncnn::Layer* op = SplitFeature_layer_creator(nullptr);
+
+        // // set param
+        // ncnn::ParamDict pd;
+        // pd.set(0, 2);// op_type
+
+        // op->load_param(pd);
+
+        // op->create_pipeline(opt);
+        // op->forward(testMat, testOutMat, opt);
+        // op->destroy_pipeline(opt);
+        // delete op;
+        // print_mat(testOutMat, "test_out");
 
         {
             // flownet
@@ -1138,7 +1170,7 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
 
         // cut padding and postproc
         flow.create(w, h, 2);
-        print_mat(flow_padded, L"flow_padded");
+        print_mat(flow_padded, "flow_padded");
     }
 
     // download

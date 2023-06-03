@@ -25,6 +25,7 @@ int ConvexUpsampling::load_param(const ParamDict& pd)
 
 int ConvexUpsampling::forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<ncnn::Mat>& top_blobs, const ncnn::Option& opt) const
 {
+    // checked, should be working
     const Mat& flow = bottom_blobs[0];
     const Mat& up_flow = bottom_blobs[1];
 
@@ -42,12 +43,9 @@ int ConvexUpsampling::forward(const std::vector<ncnn::Mat>& bottom_blobs, std::v
     if (top_blob.empty())
         return -100;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+//#pragma omp parallel for num_threads(opt.num_threads)
     for (int q = 0; q < c; q++)
     {
-        /*int p = q / (split_num * split_num);
-        int sh = (q % (split_num * split_num)) / split_num;
-        int sw = (q % (split_num * split_num)) % split_num;*/
 
         Mat m = top_blob.channel(q);
         for (int sh = 0; sh < split_num; sh++)
