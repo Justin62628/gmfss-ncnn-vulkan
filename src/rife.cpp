@@ -157,7 +157,7 @@ int RIFE::load(const std::string& modeldir)
     fusionnet.register_custom_layer("rife.Warp", Warp_layer_creator);
 
 #if _WIN32
-    load_param_model(flownet, modeldir, L"gmfss");
+    load_param_model(flownet, modeldir, L"flownet_288");
     if (!rife_v4)
     {
         load_param_model(contextnet, modeldir, L"contextnet");

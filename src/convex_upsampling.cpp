@@ -43,7 +43,7 @@ int ConvexUpsampling::forward(const std::vector<ncnn::Mat>& bottom_blobs, std::v
     if (top_blob.empty())
         return -100;
 
-//#pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
     for (int q = 0; q < c; q++)
     {
 

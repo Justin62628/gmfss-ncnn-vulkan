@@ -120,7 +120,7 @@ int MergeSplits::forward(const Mat& bottom_blob, Mat& top_blob, const Option& op
     if (top_blob.empty() || channels != upscale_factor * upscale_factor)
         return -100;
 
-//#pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
     for (int p = 0; p < outc; p++)
     {
         Mat m = top_blob.channel(p);

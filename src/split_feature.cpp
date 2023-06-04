@@ -121,7 +121,7 @@ int SplitFeature::forward(const Mat& bottom_blob, Mat& top_blob, const Option& o
     if (top_blob.empty())
         return -100;
 
-//#pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
     for (int q = 0; q < channels; q++)  // top.d
     {
         const Mat m = bottom_blob.channel(q);
