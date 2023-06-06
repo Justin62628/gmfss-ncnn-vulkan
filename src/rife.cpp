@@ -28,6 +28,8 @@ DEFINE_LAYER_CREATOR(Warp)
 DEFINE_LAYER_CREATOR(SplitFeature)
 DEFINE_LAYER_CREATOR(MergeSplits)
 DEFINE_LAYER_CREATOR(ConvexUpsampling)
+DEFINE_LAYER_CREATOR(Softsplat)
+DEFINE_LAYER_CREATOR(Gt)
 
 
 RIFE::RIFE(int gpuid, bool _tta_mode, bool _tta_temporal_mode, bool _uhd_mode, int _num_threads, bool _rife_v2, bool _rife_v4)
@@ -153,11 +155,15 @@ int RIFE::load(const std::string& modeldir)
     flownet.register_custom_layer("model.gmflow.utils.split_feature", SplitFeature_layer_creator);
     flownet.register_custom_layer("model.gmflow.utils.merge_splits", MergeSplits_layer_creator);
     flownet.register_custom_layer("model.gmflow.utils.convex_upsampling", ConvexUpsampling_layer_creator);
+    flownet.register_custom_layer("softsplat.forward", Softsplat_layer_creator);
+    flownet.register_custom_layer("torch.gt", Gt_layer_creator);
     contextnet.register_custom_layer("rife.Warp", Warp_layer_creator);
     fusionnet.register_custom_layer("rife.Warp", Warp_layer_creator);
+    fusionnet.register_custom_layer("softsplat.forward", Softsplat_layer_creator);
 
 #if _WIN32
-    load_param_model(flownet, modeldir, L"flownet_288");
+    load_param_model(flownet, modeldir, L"reuse_576");
+    load_param_model(fusionnet, modeldir, L"infer_576");
     if (!rife_v4)
     {
         load_param_model(contextnet, modeldir, L"contextnet");
@@ -1047,17 +1053,15 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
 #endif
     }
 
-    ncnn::Mat flow;
+
+    ncnn::Mat out, out_padded;
 
     {
         // preproc and border padding
         ncnn::Mat in0_padded;
         ncnn::Mat in1_padded;
         ncnn::Mat timestep_padded;
-
         
-        float mean_vals[3] = { 0.485, 0.456, 0.406};
-        float norm_vals[3] = { 0.229, 0.224, 0.225};
         {
             in0_padded.create(w_padded, h_padded, 3);
             for (int q = 0; q < 3; q++)
@@ -1072,7 +1076,7 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
                     int j = 0;
                     for (; j < w; j++)
                     {
-                        *outptr++ = (*ptr++ * (1 / 255.f) - mean_vals[q]) / norm_vals[q];
+                        *outptr++ = *ptr++ * (1 / 255.f);
                     }
                     for (; j < w_padded; j++)
                     {
@@ -1102,7 +1106,7 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
                     int j = 0;
                     for (; j < w; j++)
                     {
-                        *outptr++ = (*ptr++ * (1 / 255.f) - mean_vals[q]) / norm_vals[q];
+                        *outptr++ = *ptr++ * (1 / 255.f);
                     }
                     for (; j < w_padded; j++)
                     {
@@ -1119,16 +1123,17 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
             }
         }
         {
-            timestep_padded.create(w_padded, h_padded, 1);
+            timestep_padded.create(1, 1, 1);  // only multiply with 3d tensor
             timestep_padded.fill(timestep);
         }
-
-        ncnn::Mat flow_padded;
+        ncnn::Mat flow01, flow10, metric, feat11, feat12, feat13, feat21, feat22, feat23;
         ncnn::Mat out_padded_reversed;
 
-        print_mat(in0_padded, "in0_padded");
+        // load_mat(in0_padded, "in0_padded.txt");
+        // load_mat(in1_padded, "in1_padded.txt");
 
-        // Some Test
+
+        /* Some Test
         // ncnn::Mat testMat, testOutMat;
         // testMat.create(6, 4, 2);
         // //testOutMat.create(3, 2, 2, 4);
@@ -1156,7 +1161,8 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
         // op->forward(testMat, testOutMat, opt);
         // op->destroy_pipeline(opt);
         // delete op;
-        // print_mat(testOutMat, "test_out");
+        print_mat(testOutMat, "test_out");
+        */ 
 
         {
             // flownet
@@ -1164,19 +1170,70 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
 
             ex.input("in0", in0_padded);
             ex.input("in1", in1_padded);
-            // ex.input("in2", timestep_padded);
-            ex.extract("out0", flow_padded);
+            ex.extract("out0", flow01);
+            ex.extract("out1", flow10);
+            ex.extract("out2", metric);
+            ex.extract("out3", feat11);
+            ex.extract("out4", feat12);
+            ex.extract("out5", feat13);
+            ex.extract("out6", feat21);
+            ex.extract("out7", feat22);
+            ex.extract("out8", feat23);
+            
+            // print_mat_shape(flow01, "flow01");
+
         }
 
+        out_padded.create(w_padded, h_padded, 3);
+        // print_mat(flow01, "flow01");
+        {
+            // infernet
+            // load_mat(flow01, "flow01.txt");
+
+            // flow01.create(480, 288, 2);
+            // flow01.fill(0.5f);
+
+            ncnn::Extractor ex = fusionnet.create_extractor();
+            ex.input("img0", in0_padded);
+            ex.input("img1", in1_padded);
+            ex.input("timestep", timestep_padded);
+            ex.input("flow01", flow01);
+            ex.input("flow10", flow10);
+            ex.input("metric", metric);
+            ex.input("feat11", feat11);
+            ex.input("feat12", feat12);
+            ex.input("feat13", feat13);
+            ex.input("feat21", feat21);
+            ex.input("feat22", feat22);
+            ex.input("feat23", feat23);
+            ex.extract("out0", out_padded);
+        }
+        // print_mat(out_padded, "out");
+
         // cut padding and postproc
-        flow.create(w, h, 2);
-        print_mat(flow_padded, "flow_padded");
+        out.create(w, h, 3);
+        {
+            for (int q = 0; q < 3; q++)
+            {
+                float* outptr = out.channel(q);
+                const float* ptr = out_padded.channel(q);
+
+                for (int i = 0; i < h; i++)
+                {
+                    for (int j = 0; j < w; j++)
+                    {
+                        *outptr++ = *ptr++ * 255.f + 0.5f;
+                    }
+                }
+            }
+        }
+
     }
 
     // download
     {
 #if _WIN32
-        flow.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_GRAY2RGB);
+        out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB2BGR);
 #else
         out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
 #endif

@@ -265,6 +265,8 @@ add_executable(rife-ncnn-vulkan
     split_feature.cpp
     merge_splits.cpp
     convex_upsampling.cpp
+    softsplat.cpp
+    gt.cpp
 )
 
 add_dependencies(rife-ncnn-vulkan generate-spirv)

@@ -58,4 +58,26 @@ public:
     int split_num;
 };
 
+class Softsplat : public ncnn::Layer
+{
+public:
+    Softsplat();
+
+    virtual int load_param(const ncnn::ParamDict& pd);
+
+    virtual int forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<ncnn::Mat>& top_blobs, const ncnn::Option& opt) const;
+
+};
+
+class Gt : public ncnn::Layer
+{
+public:
+    Gt();
+
+    virtual int load_param(const ncnn::ParamDict& pd);
+
+    virtual int forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<ncnn::Mat>& top_blobs, const ncnn::Option& opt) const;
+
+};
+
 #endif // RIFE_OPS_H

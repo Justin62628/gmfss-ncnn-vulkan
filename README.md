@@ -1,31 +1,36 @@
-# RIFE ncnn Vulkan
+# GMFSS ncnn ~~Vulkan~~
 
 ![CI](https://github.com/nihui/rife-ncnn-vulkan/workflows/CI/badge.svg)
 ![download](https://img.shields.io/github/downloads/nihui/rife-ncnn-vulkan/total.svg)
 
-ncnn implementation of RIFE, Real-Time Intermediate Flow Estimation for Video Frame Interpolation.
+ncnn implementation of GMFSS.
 
-rife-ncnn-vulkan uses [ncnn project](https://github.com/Tencent/ncnn) as the universal neural network inference framework.
+gmfss-ncnn-vulkan uses [ncnn project](https://github.com/Tencent/ncnn) as the universal neural network inference framework.
 
-## [Download](https://github.com/nihui/rife-ncnn-vulkan/releases)
+## TODOs
 
-Download Windows/Linux/MacOS Executable for Intel/AMD/Nvidia GPU
+Important Notes:
 
-**https://github.com/nihui/rife-ncnn-vulkan/releases**
+Currently, only 576p(960x576) is supported as input. For other input resolution, you need to export ncnn.param and ncnn.bin on your own, referering  https://github.com/Justin62628/gmfss-ncnn-vulkan/blob/main/GMF2NCNN.ipynb
 
-This package includes all the binaries and models required. It is portable, so no CUDA or PyTorch runtime environment is needed :)
+- [ ] Vulkan Acceleration
+- [ ] Dynamic input resolution
+- [ ] TTA
+- [ ] Modern Distribution
 
-## About RIFE
+## (TODO) [Download](https://github.com/nihui/rife-ncnn-vulkan/releases) 
 
-RIFE (Real-Time Intermediate Flow Estimation for Video Frame Interpolation)
+~~Download Windows/Linux/MacOS Executable for Intel/AMD/Nvidia GPU~~
 
-https://github.com/hzwer/arXiv2020-RIFE
+~~**https://github.com/nihui/rife-ncnn-vulkan/releases**~~
 
-Huang, Zhewei and Zhang, Tianyuan and Heng, Wen and Shi, Boxin and Zhou, Shuchang
+~~This package includes all the binaries and models required. It is portable, so no CUDA or PyTorch runtime environment is needed :)~~
 
-https://rife-vfi.github.io
+## About GMFSS
 
-https://arxiv.org/abs/2011.06294
+https://github.com/98mxr/GMFSS_Fortuna.
+
+A VFI algorithm for Anime
 
 ## Usages
 
@@ -133,28 +138,18 @@ cmake ../src
 cmake --build . -j 4
 ```
 
-### Model
+### (TODO) Model
 
 | model | upstream version |
 |---|---|
-| rife | 1.2 |
-| rife-HD | 1.5 |
-| rife-UHD | 1.6 |
-| rife-anime | 1.8 |
-| rife-v2 | 2.0 |
-| rife-v2.3 | 2.3 |
-| rife-v2.4 | 2.4 |
-| rife-v3.0 | 3.0 |
-| rife-v3.1 | 3.1 |
-| rife-v4 | 4.0 |
-| rife-v4.6 | 4.6 |
+| gmfss | ?                |
 
 ## Sample Images
 
 ### Original Image
 
-![origin0](images/0.png)
-![origin1](images/1.png)
+![origin0](images/0022.png)
+![origin1](images/0023.png)
 
 ### Interpolate with rife rife-anime model
 
@@ -164,17 +159,13 @@ rife-ncnn-vulkan.exe -m models/rife-anime -0 0.png -1 1.png -o out.png
 
 ![rife](images/out.png)
 
-### Interpolate with rife rife-anime model + TTA-s
+### (TODO) Interpolate with rife rife-anime model + TTA-s
 
 ```shell
 rife-ncnn-vulkan.exe -m models/rife-anime -x -0 0.png -1 1.png -o out.png
 ```
 
 ![rife](images/outx.png)
-
-## Original RIFE Project
-
-- https://github.com/hzwer/arXiv2020-RIFE
 
 ## Other Open-Source Code Used
 
