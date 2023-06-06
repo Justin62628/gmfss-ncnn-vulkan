@@ -36,7 +36,15 @@ A VFI algorithm for Anime
 
 Input two frame images, output one interpolated frame image.
 
-### Example Commands
+### Currently, only CPU inference is supported:
+
+```bash
+rife-ncnn-vulkan.exe -0 images\0022.png -1 images\0023.png -o images\out.png -m models\gmfss -g -1 -j 1:16:1
+```
+
+
+
+### (TODO) Example Commands
 
 ```shell
 ./rife-ncnn-vulkan -0 0.jpg -1 1.jpg -o 01.jpg
