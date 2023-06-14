@@ -1,102 +1,17 @@
 // rife implemented with ncnn library
 
 #include "rife_ops.h"
-
-
-// #include "warp.comp.hex.h"
-// #include "warp_pack4.comp.hex.h"
-// #include "warp_pack8.comp.hex.h"
+#include "split_feature.comp.hex.h"
 
 using namespace ncnn;
 
 SplitFeature::SplitFeature()
 {
-    support_vulkan = false;
+    support_vulkan = true;
     one_blob_only = true;
     support_inplace = false;
-    // pipeline_warp = 0;
-    // pipeline_warp_pack4 = 0;
-    // pipeline_warp_pack8 = 0;
+    pipeline = 0;
 }
-
-/*
-int Warp::create_pipeline(const Option& opt)
-{
-    if (!vkdev)
-        return 0;
-
-    std::vector<vk_specialization_type> specializations(0 + 0);
-
-    // pack1
-    {
-        static std::vector<uint32_t> spirv;
-        static ncnn::Mutex lock;
-        {
-            ncnn::MutexLockGuard guard(lock);
-            if (spirv.empty())
-            {
-                compile_spirv_module(warp_comp_data, sizeof(warp_comp_data), opt, spirv);
-            }
-        }
-
-        pipeline_warp = new Pipeline(vkdev);
-        pipeline_warp->set_optimal_local_size_xyz();
-        pipeline_warp->create(spirv.data(), spirv.size() * 4, specializations);
-    }
-
-    // pack4
-    {
-        static std::vector<uint32_t> spirv;
-        static ncnn::Mutex lock;
-        {
-            ncnn::MutexLockGuard guard(lock);
-            if (spirv.empty())
-            {
-                compile_spirv_module(warp_pack4_comp_data, sizeof(warp_pack4_comp_data), opt, spirv);
-            }
-        }
-
-        pipeline_warp_pack4 = new Pipeline(vkdev);
-        pipeline_warp_pack4->set_optimal_local_size_xyz();
-        pipeline_warp_pack4->create(spirv.data(), spirv.size() * 4, specializations);
-    }
-
-    // pack8
-    if (opt.use_shader_pack8)
-    {
-        static std::vector<uint32_t> spirv;
-        static ncnn::Mutex lock;
-        {
-            ncnn::MutexLockGuard guard(lock);
-            if (spirv.empty())
-            {
-                compile_spirv_module(warp_pack8_comp_data, sizeof(warp_pack8_comp_data), opt, spirv);
-            }
-        }
-
-        pipeline_warp_pack8 = new Pipeline(vkdev);
-        pipeline_warp_pack8->set_optimal_local_size_xyz();
-        pipeline_warp_pack8->create(spirv.data(), spirv.size() * 4, specializations);
-    }
-
-    return 0;
-}
-
-int Warp::destroy_pipeline(const Option& opt)
-{
-    delete pipeline_warp;
-    pipeline_warp = 0;
-
-    delete pipeline_warp_pack4;
-    pipeline_warp_pack4 = 0;
-
-    delete pipeline_warp_pack8;
-    pipeline_warp_pack8 = 0;
-
-    return 0;
-}
-*/
-
 
 int SplitFeature::load_param(const ParamDict& pd)
 {
@@ -153,47 +68,85 @@ int SplitFeature::forward(const Mat& bottom_blob, Mat& top_blob, const Option& o
     return 0;
 }
 
-/*
-int Warp::forward(const std::vector<VkMat>& bottom_blobs, std::vector<VkMat>& top_blobs, VkCompute& cmd, const Option& opt) const
+int SplitFeature::forward(const ncnn::VkMat& bottom_blob, ncnn::VkMat& top_blob, ncnn::VkCompute& cmd, const ncnn::Option& opt) const
 {
-    const VkMat& image_blob = bottom_blobs[0];
-    const VkMat& flow_blob = bottom_blobs[1];
+    int w = bottom_blob.w;
+    int h = bottom_blob.h;
+    int c = bottom_blob.c;
+    size_t elemsize = bottom_blob.elemsize;
+    int elempack = bottom_blob.elempack;
 
-    int w = image_blob.w;
-    int h = image_blob.h;
-    int channels = image_blob.c;
-    size_t elemsize = image_blob.elemsize;
-    int elempack = image_blob.elempack;
+    VkMat input;
+    input.create(w, h, c * elempack, elemsize / elempack, 1, opt.blob_vkallocator);
+    if (input.empty())
+        return -100;
+    vkdev->convert_packing(bottom_blob, input, 1, cmd, opt);
+    c = input.c;
+    elempack = input.elempack;  // should be 1
+    elemsize = input.elemsize;
+    
+    int outw = w / stride; // w=w h=h d=1 c=c -> w=w/s h=h/s d=c c=s*s
+    int outh = h / stride;
+    int outd = c;
+    int outc = stride * stride;
 
-    VkMat& top_blob = top_blobs[0];
-    top_blob.create(w, h, channels, elemsize, elempack, opt.blob_vkallocator);
+    top_blob.create(outw, outh, outd, outc, elemsize, elempack, opt.blob_vkallocator);
     if (top_blob.empty())
         return -100;
-
-    std::vector<VkMat> bindings(3);
-    bindings[0] = image_blob;
-    bindings[1] = flow_blob;
-    bindings[2] = top_blob;
-
-    std::vector<vk_constant_type> constants(4);
-    constants[0].i = top_blob.w;
-    constants[1].i = top_blob.h;
-    constants[2].i = top_blob.c;
-    constants[3].i = top_blob.cstep;
-
-    if (elempack == 8)
+    
     {
-        cmd.record_pipeline(pipeline_warp_pack8, bindings, constants, top_blob);
+        std::vector<VkMat> bindings(2);
+        bindings[0] = input;
+        bindings[1] = top_blob;
+
+        std::vector<vk_constant_type> constants(8);
+        constants[0].i = input.w;
+        constants[1].i = input.h;
+        constants[2].i = input.c;
+        constants[3].i = stride;
+        constants[4].i = top_blob.w;
+        constants[5].i = top_blob.h;
+        constants[6].i = top_blob.d;
+        constants[7].i = top_blob.c;
+
+        cmd.record_pipeline(pipeline, bindings, constants, top_blob);
     }
-    else if (elempack == 4)
+
+    return 0;
+    
+}
+
+int SplitFeature::create_pipeline(const Option& opt)
+{
+    if (!vkdev)
+        return 0;
+
+    std::vector<vk_specialization_type> specializations(0 + 0);
+
     {
-        cmd.record_pipeline(pipeline_warp_pack4, bindings, constants, top_blob);
-    }
-    else // if (elempack == 1)
-    {
-        cmd.record_pipeline(pipeline_warp, bindings, constants, top_blob);
+        // pack1
+        static std::vector<uint32_t> spirv;
+        static ncnn::Mutex lock;
+        {
+            ncnn::MutexLockGuard guard(lock);
+            if (spirv.empty())
+            {
+                compile_spirv_module(split_feature_comp_data, sizeof(split_feature_comp_data), opt, spirv);
+            }
+        }
+
+        pipeline = new Pipeline(vkdev);
+        pipeline->set_optimal_local_size_xyz();
+        pipeline->create(spirv.data(), spirv.size() * 4, specializations);
     }
 
     return 0;
 }
-*/
+
+int SplitFeature::destroy_pipeline(const Option& opt)
+{
+    // pack1
+    delete pipeline;
+    pipeline = 0;
+    return 0;
+}

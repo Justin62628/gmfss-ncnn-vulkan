@@ -258,6 +258,8 @@ rife_add_shader(warp_pack8.comp)
 rife_add_shader(softsplat_init.comp)
 rife_add_shader(softsplat.comp)
 rife_add_shader(softsplat_norm.comp)
+rife_add_shader(split_feature.comp)
+rife_add_shader(merge_splits.comp)
 
 
 add_custom_target(generate-spirv DEPENDS ${SHADER_SPV_HEX_FILES})

@@ -28,21 +28,32 @@ class SplitFeature : public ncnn::Layer
 {
 public:
     SplitFeature();
-    virtual int forward(const ncnn::Mat& bottom_blob, ncnn::Mat& top_blob, const ncnn::Option& opt) const;
     virtual int load_param(const ncnn::ParamDict& pd);
-
+    virtual int create_pipeline(const ncnn::Option& opt);
+    virtual int destroy_pipeline(const ncnn::Option& opt);
+    virtual int forward(const ncnn::Mat& bottom_blob, ncnn::Mat& top_blob, const ncnn::Option& opt) const;
+    virtual int forward(const ncnn::VkMat& bottom_blob, ncnn::VkMat& top_blob, ncnn::VkCompute& cmd, const ncnn::Option& opt) const;
 public:
     int stride;
+
+private:
+    ncnn::Pipeline* pipeline;
+
 };
 
 class MergeSplits: public ncnn::Layer
 {
 public:
     MergeSplits();
-    virtual int forward(const ncnn::Mat& bottom_blob, ncnn::Mat& top_blob, const ncnn::Option& opt) const;
     virtual int load_param(const ncnn::ParamDict& pd);
+    virtual int create_pipeline(const ncnn::Option& opt);
+    virtual int destroy_pipeline(const ncnn::Option& opt);
+    virtual int forward(const ncnn::Mat& bottom_blob, ncnn::Mat& top_blob, const ncnn::Option& opt) const;
+    virtual int forward(const ncnn::VkMat& bottom_blob, ncnn::VkMat& top_blob, ncnn::VkCompute& cmd, const ncnn::Option& opt) const;
 public:
     int upscale_factor;
+private:
+    ncnn::Pipeline* pipeline;
 };
 
 class ConvexUpsampling : public ncnn::Layer

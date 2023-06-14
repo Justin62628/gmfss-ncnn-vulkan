@@ -1,0 +1,43 @@
+#version 450
+
+#if NCNN_fp16_storage
+#extension GL_EXT_shader_16bit_storage: require
+#endif
+
+#if NCNN_fp16_arithmetic
+#extension GL_EXT_shader_explicit_arithmetic_types_float16: require
+#extension GL_EXT_shader_explicit_arithmetic_types: require
+#endif
+
+layout (binding = 0) readonly buffer bottom_blob { sfp bottom_blob_data[]; };
+layout (binding = 1) writeonly buffer top_blob { sfp top_blob_data[]; };
+
+layout (push_constant) uniform parameter
+{
+    int w;
+    int h;
+    int channels;
+    int stride;
+    int outw; // w / s
+    int outh; // h / s
+    int outd; // c
+    int outc; // s * s
+} param;
+
+void main()
+{
+    int gx = int(gl_GlobalInvocationID.x);
+    int gy = int(gl_GlobalInvocationID.y);
+    int gz = int(gl_GlobalInvocationID.z);
+
+    if (gx >= param.outw || gy >= param.outh || gz >= param.outd * param.outc)
+        return;
+
+    int q = gz / param.outc;
+    int p = gz % param.outc;
+    int sh = p / param.stride;
+    int sw = p % param.stride;
+
+    afp input_value = buffer_ld1(bottom_blob_data, q * param.w * param.h + (sh * param.outh + gy) * param.w + sw * param.outw + gx);
+    buffer_st1(top_blob_data, gz * param.outw * param.outh + gy * param.outw + gx, input_value);
+}
