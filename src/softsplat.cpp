@@ -2,106 +2,30 @@
 
 #include "rife_ops.h"
 
-
-// #include "warp.comp.hex.h"
-// #include "warp_pack4.comp.hex.h"
-// #include "warp_pack8.comp.hex.h"
+#include "softsplat_init.comp.hex.h"
+#include "softsplat.comp.hex.h"
+#include "softsplat_norm.comp.hex.h"
 
 using namespace ncnn;
 
 Softsplat::Softsplat()
 {
-    support_vulkan = false;
+    support_vulkan = true;
     support_inplace = false;
-    // pipeline_warp = 0;
-    // pipeline_warp_pack4 = 0;
-    // pipeline_warp_pack8 = 0;
+    support_packing = false;
+    pipeline_init = 0;
+    pipeline_softsplat = 0;
+    pipeline_norm = 0;
+    pipeline_softsplat_pack4 = 0; // TODO
+    pipeline_softsplat_pack8 = 0;
 }
-
-/*
-int Warp::create_pipeline(const Option& opt)
-{
-    if (!vkdev)
-        return 0;
-
-    std::vector<vk_specialization_type> specializations(0 + 0);
-
-    // pack1
-    {
-        static std::vector<uint32_t> spirv;
-        static ncnn::Mutex lock;
-        {
-            ncnn::MutexLockGuard guard(lock);
-            if (spirv.empty())
-            {
-                compile_spirv_module(warp_comp_data, sizeof(warp_comp_data), opt, spirv);
-            }
-        }
-
-        pipeline_warp = new Pipeline(vkdev);
-        pipeline_warp->set_optimal_local_size_xyz();
-        pipeline_warp->create(spirv.data(), spirv.size() * 4, specializations);
-    }
-
-    // pack4
-    {
-        static std::vector<uint32_t> spirv;
-        static ncnn::Mutex lock;
-        {
-            ncnn::MutexLockGuard guard(lock);
-            if (spirv.empty())
-            {
-                compile_spirv_module(warp_pack4_comp_data, sizeof(warp_pack4_comp_data), opt, spirv);
-            }
-        }
-
-        pipeline_warp_pack4 = new Pipeline(vkdev);
-        pipeline_warp_pack4->set_optimal_local_size_xyz();
-        pipeline_warp_pack4->create(spirv.data(), spirv.size() * 4, specializations);
-    }
-
-    // pack8
-    if (opt.use_shader_pack8)
-    {
-        static std::vector<uint32_t> spirv;
-        static ncnn::Mutex lock;
-        {
-            ncnn::MutexLockGuard guard(lock);
-            if (spirv.empty())
-            {
-                compile_spirv_module(warp_pack8_comp_data, sizeof(warp_pack8_comp_data), opt, spirv);
-            }
-        }
-
-        pipeline_warp_pack8 = new Pipeline(vkdev);
-        pipeline_warp_pack8->set_optimal_local_size_xyz();
-        pipeline_warp_pack8->create(spirv.data(), spirv.size() * 4, specializations);
-    }
-
-    return 0;
-}
-
-int Warp::destroy_pipeline(const Option& opt)
-{
-    delete pipeline_warp;
-    pipeline_warp = 0;
-
-    delete pipeline_warp_pack4;
-    pipeline_warp_pack4 = 0;
-
-    delete pipeline_warp_pack8;
-    pipeline_warp_pack8 = 0;
-
-    return 0;
-}
-*/
 
 
 int Softsplat::load_param(const ParamDict& pd)
 {
-
     return 0;
 }
+
 int Softsplat::forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<ncnn::Mat>& top_blobs, const ncnn::Option& opt) const
 {
     const Mat& input = bottom_blobs[0];
@@ -175,6 +99,170 @@ int Softsplat::forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<n
             }
         }
     }
+
+    return 0;
+}
+
+int Softsplat::forward(const std::vector<VkMat>& bottom_blobs, std::vector<VkMat>& top_blobs, VkCompute& cmd, const Option& opt) const
+{
+    const VkMat& input_unpacked = bottom_blobs[0];
+    const VkMat& flow = bottom_blobs[1];
+
+    int w = input_unpacked.w;
+    int h = input_unpacked.h;
+    int c = input_unpacked.c;
+    size_t elemsize = input_unpacked.elemsize;
+    int elempack = input_unpacked.elempack;
+
+    VkMat input;
+    input.create(w, h, c * elempack, elemsize / elempack, 1, opt.blob_vkallocator);
+    if (input.empty())
+        return -100;
+    vkdev->convert_packing(input_unpacked, input, 1, cmd, opt);
+    c = input.c;
+    elempack = input.elempack;  // should be 1
+    elemsize = input.elemsize;
+
+    VkMat& top_blob = top_blobs[0];
+    top_blob.create(w, h, c-1, elemsize, elempack, opt.blob_vkallocator);
+    if (top_blob.empty())
+        return -100;
+
+    VkMat ss_blob;
+    // ss_blob.create(w, h, c, elemsize, elempack, opt.blob_vkallocator);
+    ss_blob.create(w, h, c, 4u, elempack, opt.blob_vkallocator);  // float
+    if (ss_blob.empty())
+        return -100;
+
+    {
+        // init, fill ss_blob with zero
+        std::vector<ncnn::VkMat> bindings(1);
+        bindings[0] = ss_blob;
+
+        std::vector<ncnn::vk_constant_type> constants(5);
+        constants[0].i = ss_blob.w;
+        constants[1].i = ss_blob.h;
+        constants[2].i = ss_blob.c;
+        constants[3].i = ss_blob.cstep;
+        constants[4].f = 0.f;
+
+        cmd.record_pipeline(pipeline_init, bindings, constants, ss_blob);
+    }
+
+    {
+        // softsplat
+        std::vector<VkMat> bindings(3);
+        bindings[0] = input;
+        bindings[1] = flow;
+        bindings[2] = ss_blob;
+
+        std::vector<vk_constant_type> constants(4);
+        constants[0].i = ss_blob.w;
+        constants[1].i = ss_blob.h;
+        constants[2].i = ss_blob.c;
+        constants[3].i = ss_blob.cstep;
+
+        cmd.record_pipeline(pipeline_softsplat, bindings, constants, ss_blob);
+    }
+
+    {
+        // norm
+        std::vector<VkMat> bindings(2);
+        bindings[0] = ss_blob;
+        bindings[1] = top_blob;
+
+        std::vector<vk_constant_type> constants(4);
+        constants[0].i = top_blob.w;
+        constants[1].i = top_blob.h;
+        constants[2].i = top_blob.c;
+        constants[3].i = top_blob.cstep;
+
+        cmd.record_pipeline(pipeline_norm, bindings, constants, top_blob);
+    }
+
+    return 0;
+}
+
+
+int Softsplat::create_pipeline(const Option& opt)
+{
+    if (!vkdev)
+        return 0;
+
+    std::vector<vk_specialization_type> specializations(0 + 0);
+
+    // init
+    {
+        // pack1
+        static std::vector<uint32_t> spirv;
+        static ncnn::Mutex lock;
+        {
+            ncnn::MutexLockGuard guard(lock);
+            if (spirv.empty())
+            {
+                compile_spirv_module(softsplat_init_comp_data, sizeof(softsplat_init_comp_data), opt, spirv);
+            }
+        }
+
+        pipeline_init = new Pipeline(vkdev);
+        pipeline_init->set_optimal_local_size_xyz();
+        pipeline_init->create(spirv.data(), spirv.size() * 4, specializations);
+    }
+
+    // softsplat
+    {
+        // pack1
+        static std::vector<uint32_t> spirv;
+        static ncnn::Mutex lock;
+        {
+            ncnn::MutexLockGuard guard(lock);
+            if (spirv.empty())
+            {
+                compile_spirv_module(softsplat_comp_data, sizeof(softsplat_comp_data), opt, spirv);
+            }
+        }
+
+        pipeline_softsplat = new Pipeline(vkdev);
+        pipeline_softsplat->set_optimal_local_size_xyz();
+        pipeline_softsplat->create(spirv.data(), spirv.size() * 4, specializations);
+    }
+
+    // norm
+    {
+        // pack1
+        static std::vector<uint32_t> spirv;
+        static ncnn::Mutex lock;
+        {
+            ncnn::MutexLockGuard guard(lock);
+            if (spirv.empty())
+            {
+                compile_spirv_module(softsplat_norm_comp_data, sizeof(softsplat_norm_comp_data), opt, spirv);
+            }
+        }
+
+        pipeline_norm = new Pipeline(vkdev);
+        pipeline_norm->set_optimal_local_size_xyz();
+        pipeline_norm->create(spirv.data(), spirv.size() * 4, specializations);
+    }
+
+    return 0;
+}
+
+int Softsplat::destroy_pipeline(const Option& opt)
+{
+    // pack1
+    delete pipeline_init;
+    pipeline_init = 0;
+    delete pipeline_softsplat;
+    pipeline_softsplat = 0;
+    delete pipeline_norm;
+    pipeline_norm = 0;
+
+    delete pipeline_softsplat_pack4;
+    pipeline_softsplat_pack4 = 0;
+
+    delete pipeline_softsplat_pack8;
+    pipeline_softsplat_pack8 = 0;
 
     return 0;
 }

@@ -64,8 +64,20 @@ public:
     Softsplat();
 
     virtual int load_param(const ncnn::ParamDict& pd);
-
+    virtual int create_pipeline(const ncnn::Option& opt);
+    virtual int destroy_pipeline(const ncnn::Option& opt);
     virtual int forward(const std::vector<ncnn::Mat>& bottom_blobs, std::vector<ncnn::Mat>& top_blobs, const ncnn::Option& opt) const;
+    virtual int forward(const std::vector<ncnn::VkMat>& bottom_blobs, std::vector<ncnn::VkMat>& top_blobs, ncnn::VkCompute& cmd, const ncnn::Option& opt) const;
+
+private:
+    ncnn::Pipeline* pipeline_init; // fill zero
+    ncnn::Pipeline* pipeline_softsplat;
+    ncnn::Pipeline* pipeline_softsplat_pack4;
+    ncnn::Pipeline* pipeline_softsplat_pack8;
+    
+    ncnn::Pipeline* pipeline_norm;
+    ncnn::Pipeline* pipeline_norm_pack4;
+    ncnn::Pipeline* pipeline_norm_pack8;
 
 };
 

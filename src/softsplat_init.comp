@@ -1,0 +1,38 @@
+// rife implemented with ncnn library
+
+#version 450
+
+#if NCNN_fp16_storage
+#extension GL_EXT_shader_16bit_storage: require
+#endif
+
+#if NCNN_fp16_arithmetic
+#extension GL_EXT_shader_explicit_arithmetic_types_float16: require
+#extension GL_EXT_shader_explicit_arithmetic_types: require
+#endif
+#extension GL_EXT_shader_atomic_float2: require
+#extension GL_EXT_shader_atomic_float: require
+
+layout (binding = 0) writeonly buffer top_blob { float top_blob_data[]; };
+
+layout (push_constant) uniform parameter
+{
+    int w;
+    int h;
+    int c;
+    int cstep;
+
+    float value;
+} p;
+
+void main()
+{
+    int gx = int(gl_GlobalInvocationID.x);
+    int gy = int(gl_GlobalInvocationID.y);
+    int gz = int(gl_GlobalInvocationID.z);
+
+    if (gx >= p.w || gy >= p.h || gz >= p.c)
+        return;
+
+    top_blob_data[gz * p.cstep + gy * p.w + gx] = float(p.value);
+}

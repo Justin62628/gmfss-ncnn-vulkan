@@ -1,0 +1,80 @@
+// rife implemented with ncnn library
+
+#version 450
+
+#if NCNN_fp16_storage
+#extension GL_EXT_shader_16bit_storage: require
+#endif
+
+#if NCNN_fp16_arithmetic
+#extension GL_EXT_shader_explicit_arithmetic_types_float16: require
+#extension GL_EXT_shader_explicit_arithmetic_types: require
+#endif
+#extension GL_EXT_shader_atomic_float2: require
+#extension GL_EXT_shader_atomic_float: require
+
+layout (binding = 0) readonly buffer image_blob { sfp image_blob_data[]; };
+layout (binding = 1) readonly buffer flow_blob { sfp flow_blob_data[]; };
+layout (binding = 2) writeonly buffer ss_blob { float ss_blob_data[]; };
+
+layout (push_constant) uniform parameter
+{
+    int w;
+    int h;
+    int c;
+    int cstep;
+} p;
+
+void main()
+{
+    int gx = int(gl_GlobalInvocationID.x);
+    int gy = int(gl_GlobalInvocationID.y);
+    int gz = int(gl_GlobalInvocationID.z);
+
+    if (gx >= p.w || gy >= p.h || gz >= p.c)
+        return;
+
+    afp flow_x = buffer_ld1(flow_blob_data, gy * p.w + gx);
+    afp flow_y = buffer_ld1(flow_blob_data, p.cstep + gy * p.w + gx);
+
+    afp fltOutputX = afp(gx) + flow_x;
+    afp fltOutputY = afp(gy) + flow_y;
+
+    int intNorthwestX = int(floor(fltOutputX));
+    int intNorthwestY = int(floor(fltOutputY));
+    int intNortheastX = intNorthwestX + 1;
+    int intNortheastY = intNorthwestY;
+    int intSouthwestX = intNorthwestX;
+    int intSouthwestY = intNorthwestY + 1;
+    int intSoutheastX = intNorthwestX + 1;
+    int intSoutheastY = intNorthwestY + 1;
+
+    afp fltNorthwest = (afp(intSoutheastX)-fltOutputX) * (afp(intSoutheastY)-fltOutputY);
+    afp fltNortheast = (fltOutputX - afp(intSouthwestX)) * (afp(intSouthwestY)-fltOutputY);
+    afp fltSouthwest = (afp(intNortheastX)-fltOutputX) * (fltOutputY - afp(intNortheastY));
+    afp fltSoutheast = (fltOutputX - afp(intNorthwestX)) * (fltOutputY - afp(intNorthwestY));
+
+    afp input_value = buffer_ld1(image_blob_data, gz * p.cstep + gy * p.w + gx);
+
+    if (intNorthwestX >= 0 && intNorthwestX < p.w && intNorthwestY >= 0 && intNorthwestY < p.h)
+        // ss_blob_data[gz * p.cstep + intNorthwestY * p.w + intNorthwestX] += sfp(input_value * fltNorthwest);
+        // atomicAdd(ss_blob_data[gz * p.cstep + intNorthwestY * p.w + intNorthwestX], sfp(input_value * fltNorthwest));
+        // atomicAdd(ss_blob_data[gz * p.cstep + intNorthwestY * p.w + intNorthwestX], int(100000.0 * input_value * fltNorthwest));
+        atomicAdd(ss_blob_data[gz * p.cstep + intNorthwestY * p.w + intNorthwestX], float(input_value * fltNorthwest));
+    if (intNortheastX >= 0 && intNortheastX < p.w && intNortheastY >= 0 && intNortheastY < p.h)
+        // ss_blob_data[gz * p.cstep + intNortheastY * p.w + intNortheastX] += sfp(input_value * fltNortheast);
+        // atomicAdd(ss_blob_data[gz * p.cstep + intNortheastY * p.w + intNortheastX], sfp(input_value * fltNortheast));
+        // atomicAdd(ss_blob_data[gz * p.cstep + intNortheastY * p.w + intNortheastX], int(100000.0 * input_value * fltNortheast));
+        atomicAdd(ss_blob_data[gz * p.cstep + intNortheastY * p.w + intNortheastX], float(input_value * fltNortheast));
+    if (intSouthwestX >= 0 && intSouthwestX < p.w && intSouthwestY >= 0 && intSouthwestY < p.h)
+        // ss_blob_data[gz * p.cstep + intSouthwestY * p.w + intSouthwestX] += sfp(input_value * fltSouthwest);
+        // atomicAdd(ss_blob_data[gz * p.cstep + intSouthwestY * p.w + intSouthwestX], sfp(input_value * fltSouthwest));
+        // atomicAdd(ss_blob_data[gz * p.cstep + intSouthwestY * p.w + intSouthwestX], int(100000.0 * input_value * fltSouthwest));
+        atomicAdd(ss_blob_data[gz * p.cstep + intSouthwestY * p.w + intSouthwestX], float(input_value * fltSouthwest));
+    if (intSoutheastX >= 0 && intSoutheastX < p.w && intSoutheastY >= 0 && intSoutheastY < p.h)
+        // ss_blob_data[gz * p.cstep + intSoutheastY * p.w + intSoutheastX] += sfp(input_value * fltSoutheast);
+        // atomicAdd(ss_blob_data[gz * p.cstep + intSoutheastY * p.w + intSoutheastX], sfp(input_value * fltSoutheast));
+        // atomicAdd(ss_blob_data[gz * p.cstep + intSoutheastY * p.w + intSoutheastX], int(100000.0 * input_value * fltSoutheast));
+        atomicAdd(ss_blob_data[gz * p.cstep + intSoutheastY * p.w + intSoutheastX], float(input_value * fltSoutheast));
+
+}

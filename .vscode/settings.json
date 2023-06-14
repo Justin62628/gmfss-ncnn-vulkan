@@ -88,5 +88,6 @@
         "xstddef": "cpp",
         "xtr1common": "cpp",
         "xtree": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "D:/Program/VSsource/research/gmfss-ncnn-vulkan-demo/src"
 }
