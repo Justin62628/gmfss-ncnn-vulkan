@@ -165,7 +165,7 @@ cmake --build . -j 4
 rife-ncnn-vulkan.exe -m models/rife-anime -0 0.png -1 1.png -o out.png
 ```
 
-![rife](images/out.png)
+![rife](images/out_cpu.png)
 
 ### (TODO) Interpolate with rife rife-anime model + TTA-s
 
