@@ -159,20 +159,23 @@ git submodule update --init --recursive
 ![origin0](images/0022.png)
 ![origin1](images/0023.png)
 
-### Interpolate with gmfss ? model
+### Interpolate with gmfss fortuna (pg 104) model
 
 ```shell
 rife-ncnn-vulkan.exe -m models/gmfss -0 images/0022.png -1 images/0023.png -o images/out.png
 ```
 
-![rife-4.6](images/out_rife4.6.png)
 ![gmfss](images/out_cpu.png)
 
+#### Compare with rife ncnn vulkan 4.6
 
-### (TODO) Interpolate with gmfss ? model + TTA-s
+![rife-4.6](images/out_rife4.6.png)
+
+
+### (TODO) Interpolate with gmfss model + TTA-s
 
 ```shell
-rife-ncnn-vulkan.exe -m modelsgmfss -x -0 images/0022.png -1 images/0023.png -o images/out.png
+rife-ncnn-vulkan.exe -m models/gmfss -x -0 images/0022.png -1 images/0023.png -o images/out.png
 ```
 
 ## Other Open-Source Code Used

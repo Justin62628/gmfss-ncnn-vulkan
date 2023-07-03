@@ -7,7 +7,7 @@ using namespace ncnn;
 
 MergeSplits::MergeSplits()
 {
-    support_vulkan = true;
+    support_vulkan = false;
     one_blob_only = true;
     support_inplace = false;
     pipeline = 0;
