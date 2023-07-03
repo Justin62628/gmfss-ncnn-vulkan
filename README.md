@@ -47,13 +47,13 @@ rife-ncnn-vulkan.exe -0 images\0022.png -1 images\0023.png -o images\out.png -m 
 ### (TODO) Example Commands
 
 ```shell
-./rife-ncnn-vulkan -0 0.jpg -1 1.jpg -o 01.jpg
-./rife-ncnn-vulkan -i input_frames/ -o output_frames/
+./rife-ncnn-vulkan -m models/gmfss -0 0.jpg -1 1.jpg -o 01.jpg
+./rife-ncnn-vulkan -m models/gmfss -i input_frames/ -o output_frames/
 ```
 
 Example below runs on CPU, Discrete GPU, and Integrated GPU all at the same time. Uses 2 threads for image decoding, 4 threads for one CPU worker, 4 threads for another CPU worker, 2 threads for discrete GPU, 1 thread for integrated GPU, and 4 threads for image encoding.
 ```shell
-./rife-ncnn-vulkan -i input_frames/ -o output_frames/ -g -1,-1,0,1 -j 2:4,4,2,1:4
+./rife-ncnn-vulkan -m models/gmfss -i input_frames/ -o output_frames/ -g -1,-1,0,1 -j 2:4,4,2,1:4
 ```
 
 ### Video Interpolation with FFmpeg
@@ -72,7 +72,7 @@ ffmpeg -i input.mp4 -vn -acodec copy audio.m4a
 ffmpeg -i input.mp4 input_frames/frame_%08d.png
 
 # interpolate 2x frame count
-./rife-ncnn-vulkan -i input_frames -o output_frames
+./rife-ncnn-vulkan -m models/gmfss -i input_frames -o output_frames
 
 # encode interpolated frames in 48fps with audio
 ffmpeg -framerate 48 -i output_frames/%08d.png -i audio.m4a -c:a copy -crf 20 -c:v libx264 -pix_fmt yuv420p output.mp4
@@ -131,20 +131,20 @@ pacman -S vulkan-headers vulkan-icd-loader
 2. Clone this project with all submodules
 
 ```shell
-git clone https://github.com/nihui/rife-ncnn-vulkan.git
-cd rife-ncnn-vulkan
+git clone https://github.com/Justin62628/gmfss-ncnn-vulkan.git
+cd gmfss-ncnn-vulkan/src
+git clone https://github.com/Tencent/ncnn.git
+cd ..
 git submodule update --init --recursive
 ```
 
-3. Build with CMake
-  - You can pass -DUSE_STATIC_MOLTENVK=ON option to avoid linking the vulkan loader library on MacOS
+3. Build with Visual Studio(CMake)
 
-```shell
-mkdir build
-cd build
-cmake ../src
-cmake --build . -j 4
-```
+> Open the folder where gmfss-ncnn-vulkan is located
+> 
+> Select src/CMakeLists in Visual Studio
+> 
+> Click Generate - Generate All
 
 ### (TODO) Model
 
@@ -159,21 +159,21 @@ cmake --build . -j 4
 ![origin0](images/0022.png)
 ![origin1](images/0023.png)
 
-### Interpolate with rife rife-anime model
+### Interpolate with gmfss ? model
 
 ```shell
-rife-ncnn-vulkan.exe -m models/rife-anime -0 0.png -1 1.png -o out.png
+rife-ncnn-vulkan.exe -m models/gmfss -0 images/0022.png -1 images/0023.png -o images/out.png
 ```
 
-![rife](images/out_cpu.png)
+![rife-4.6](images/out_rife4.6.png)
+![gmfss](images/out_cpu.png)
 
-### (TODO) Interpolate with rife rife-anime model + TTA-s
+
+### (TODO) Interpolate with gmfss ? model + TTA-s
 
 ```shell
-rife-ncnn-vulkan.exe -m models/rife-anime -x -0 0.png -1 1.png -o out.png
+rife-ncnn-vulkan.exe -m modelsgmfss -x -0 images/0022.png -1 images/0023.png -o images/out.png
 ```
-
-![rife](images/outx.png)
 
 ## Other Open-Source Code Used
 
