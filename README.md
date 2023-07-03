@@ -134,7 +134,7 @@ pacman -S vulkan-headers vulkan-icd-loader
 git clone https://github.com/Justin62628/gmfss-ncnn-vulkan.git
 cd gmfss-ncnn-vulkan/src
 git clone https://github.com/Tencent/ncnn.git
-cd..
+cd ..
 git submodule update --init --recursive
 ```
 
@@ -142,7 +142,7 @@ git submodule update --init --recursive
 
 > Open the folder where gmfss-ncnn-vulkan is located
 > 
-> Run CMakeLists stored in src
+> Select src/CMakeLists in Visual Studio
 > 
 > Click Generate - Generate All
 
@@ -165,15 +165,15 @@ git submodule update --init --recursive
 rife-ncnn-vulkan.exe -m models/gmfss -0 images/0022.png -1 images/0023.png -o images/out.png
 ```
 
-![rife](images/out_cpu.png)
+![rife-4.6](images/out_rife4.6.png)
+![gmfss](images/out_cpu.png)
+
 
 ### (TODO) Interpolate with gmfss ? model + TTA-s
 
 ```shell
 rife-ncnn-vulkan.exe -m modelsgmfss -x -0 images/0022.png -1 images/0023.png -o images/out.png
 ```
-
-![rife](images/outx.png)
 
 ## Other Open-Source Code Used
 
